@@ -95,11 +95,15 @@ class Rasterizer:
         field.fill(0.0)
         wx = pos[:, 0] - ox
         wy = pos[:, 1] - oy
+        # kernel constants were calibrated for a 30px core ball — scale
+        # them with the actual body so the silhouette scales too
+        self.scale = float(rad[0]) / 30.0 if rad[0] > 0 else 1.0
+        eps = 800.0 * self.scale * self.scale
         R = np.where(np.arange(n) == 0, rad * 1.4, rad * 1.2)
         for i in range(n):
             dx = gx - wx[i]
             dy = gy - wy[i]
-            field += (R[i] * R[i]) / (dx * dx + dy * dy + 800.0)
+            field += (R[i] * R[i]) / (dx * dx + dy * dy + eps)
 
         # ---- trail (only at speed: a fast swoosh, not a wake) ----------
         if (self.trail_on and self.effects >= 2 and snap["speed"] > 280):
@@ -109,7 +113,8 @@ class Rasterizer:
                 w = (j / max(1, k - 1)) ** 2 * 0.055
                 dx = gx - (tx - ox)
                 dy = gy - (ty - oy)
-                field += w * 2100.0 / (dx * dx + dy * dy + 400.0)
+                s2 = self.scale * self.scale
+                field += w * 2100.0 * s2 / (dx * dx + dy * dy + 400.0 * s2)
         elif len(self.trail) > 3:
             self.trail.popleft()
 
@@ -139,7 +144,8 @@ class Rasterizer:
             if vn > 1:
                 lit = ((gx - (snap["center"][0] - ox)) * (v[0] / vn) +
                        (gy - (snap["center"][1] - oy)) * (v[1] / vn))
-                rim *= 0.75 + 0.5 * np.clip(lit / 90.0, -1, 1)
+                rim *= 0.75 + 0.5 * np.clip(lit / (90.0 * self.scale),
+                                            -1, 1)
             rgb += rim[..., None] * self.c_rim[None, None] * 0.85
 
             # interior flow: world-anchored plasma so it slides under the skin
@@ -152,8 +158,9 @@ class Rasterizer:
                 * 0.28 * inner[..., None]
 
             # top-light: the body reads as a volume, not a flat disc
-            top_l = np.clip((gy - (snap["center"][1] - oy)) / -130.0,
-                            -1.0, 1.0) * 0.10
+            top_l = np.clip(
+                (gy - (snap["center"][1] - oy)) / (-130.0 * self.scale),
+                -1.0, 1.0) * 0.10
             rgb += top_l[..., None] * inner[..., None] * \
                 self.c_rim[None, None]
 

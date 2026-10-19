@@ -35,10 +35,12 @@ SEP = ("-", None, None)   # separator sentinel in menu specs
 class TrayIcon:
     """NIF icon + right-click menu. `on_command(cmd_id)` dispatches."""
 
-    def __init__(self, tooltip="Zwoop", on_command=None, on_double=None):
+    def __init__(self, tooltip="Zwoop", on_command=None, on_double=None,
+                 get_spec=None):
         self.tooltip = tooltip
         self.on_command = on_command or (lambda cid: None)
         self.on_double = on_double or (lambda: None)
+        self.get_spec = get_spec or (lambda: [])
         self.hwnd = None
         self.hicon = None
         self._wndproc = None
@@ -47,9 +49,12 @@ class TrayIcon:
     # ------------------------------------------------------------ setup
     def create(self, class_name="ZwoopTray"):
         self._register(class_name)
+        # a never-shown overlapped window: invisible, but it CAN take
+        # foreground — message-only windows can't, and TrackPopupMenu
+        # needs a foregroundable owner to dismiss on click-away.
         self.hwnd = user32.CreateWindowExW(
             0, class_name, "ZwoopTray", 0, 0, 0, 0, 0,
-            wintypes.HWND(HWND_MESSAGE), None,
+            None, None,
             kernel32.GetModuleHandleW(None), None)
         if not self.hwnd:
             raise OSError("tray window creation failed")
@@ -69,10 +74,12 @@ class TrayIcon:
 
     def _wnd_proc(self, hwnd, msg, wparam, lparam):
         if msg == WM_TRAY:
-            if lparam == WM_RBUTTONUP:
+            # version<4: lParam IS the mouse message; version 4: LOWORD.
+            ev = lparam & 0xFFFF
+            if ev == WM_RBUTTONUP:
                 self.show_menu()
                 return 0
-            if lparam == WM_LBUTTONDBLCLK:
+            if ev == WM_LBUTTONDBLCLK:
                 self.on_double()
                 return 0
         elif msg == WM_DESTROY:
@@ -181,9 +188,9 @@ class TrayIcon:
                 user32.AppendMenuW(menu, flags, payload, label)
 
     def show_menu(self, spec=None):
-        """Right-click menu; spec provided by the app's describe_menu()."""
+        """Right-click menu; spec comes from the app's get_spec callback."""
         if spec is None:
-            spec = getattr(self, "menu_spec", [])
+            spec = self.get_spec()
         menu = self.build_menu(spec)
         pt = POINT()
         user32.GetCursorPos(ctypes.byref(pt))

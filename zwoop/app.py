@@ -115,7 +115,8 @@ class ZwoopApp:
             trail=bool(self.cfg.get("render.trail", True)))
         self.awareness = Awareness(
             enabled=bool(self.cfg.get("platform.hide_on_fullscreen", True)))
-        self.tray = TrayIcon("Zwoop", on_command=self._on_command)
+        self.tray = TrayIcon("Zwoop", on_command=self._on_command,
+                             get_spec=self.menu_spec)
         self.tray.create()
         self._monitor_sig = tuple((r.left, r.top, r.right, r.bottom)
                                   for r in enum_monitors())

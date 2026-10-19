@@ -17,7 +17,7 @@ DEFAULTS = {
     "creature": {
         "size": 1.0,                   # scale factor on body radius
         "particle_count": 13,          # 1 core + ring
-        "base_radius": 46.0,           # px, creature body radius at size=1
+        "base_radius": 31.0,           # px, creature body radius at size=1
     },
     "behavior": {
         "activity": 0.6,               # autonomous activity level 0..1
@@ -36,7 +36,7 @@ DEFAULTS = {
         "theme": "cosmos",             # cosmos | orchid | lagoon | ember
         "opacity": 0.92,
         "trail": True,
-        "window_size": 420,            # overlay box; must comfortably hold the body
+        "window_size": 320,            # overlay box; must comfortably hold the body
     },
     "sim": {
         "hz": 120,                     # fixed simulation step
