@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Bundled virtual environments (legacy artifacts)
+.venv/
+venv/
+
+# Zwoop runtime data
+*.log
+.zwoop/
+
+# Build output
+dist/
+build/
+*.spec
