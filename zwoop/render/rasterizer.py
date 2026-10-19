@@ -185,7 +185,10 @@ class Rasterizer:
         out[..., 1] = (rgb[..., 1] * a255).astype(np.uint8)   # G
         out[..., 2] = (rgb[..., 0] * a255).astype(np.uint8)   # R
         out[..., 3] = a255.astype(np.uint8)
-        frame[:] = np.repeat(np.repeat(out, rs, 0), rs, 1)
+        if rs == 1:
+            frame[:] = out
+        else:
+            frame.reshape(self.isize, rs, self.isize, rs, 4)[:] = out[:, None, :, None, :]
 
     def _debug_overlay(self, rgb, alpha, snap, ox, oy):
         """Particle dots, core marker, waypoint X."""

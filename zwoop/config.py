@@ -1,18 +1,22 @@
-"""Zwoop configuration: defaults, persistence, personality presets.
+"""Zwoop configuration: defaults, persistence, personality presets, and migration.
 
 Config lives at %APPDATA%\\Zwoop\\config.json (fallback: ~/.zwoop/config.json).
 Deep-merged over DEFAULTS — never mutates the defaults (legacy bug §4.11).
+Saves atomically via temp-file replacement to prevent corruption on crash.
 """
 
 import copy
 import json
 import logging
 import os
+import tempfile
+
+from .trails.schema import default_trails_config, migrate_legacy_config
 
 log = logging.getLogger("zwoop.config")
 
 DEFAULTS = {
-    "version": "1.0.0",
+    "version": "1.1.0",
     "personality": "playful",          # chill | playful | hyper | shy | custom
     "creature": {
         "size": 1.0,                   # scale factor on body radius
@@ -37,6 +41,7 @@ DEFAULTS = {
         "opacity": 0.92,
         "trail": True,
         "window_size": 320,            # overlay box; must comfortably hold the body
+        "trails": default_trails_config(),
     },
     "sim": {
         "hz": 120,                     # fixed simulation step
@@ -82,7 +87,7 @@ def _deep_merge(base: dict, overlay: dict) -> dict:
         if k in overlay and isinstance(v, dict) and isinstance(overlay[k], dict):
             out[k] = _deep_merge(v, overlay[k])
         elif k in overlay:
-            out[k] = overlay[k]
+            out[k] = copy.deepcopy(overlay[k])
         else:
             out[k] = copy.deepcopy(v)
     for k, v in overlay.items():
@@ -92,20 +97,28 @@ def _deep_merge(base: dict, overlay: dict) -> dict:
 
 
 class Config:
-    """Dict-backed settings with dotted access and JSON persistence."""
+    """Dict-backed settings with dotted access, migration, and atomic JSON persistence."""
 
     def __init__(self, path: str | None = None, overrides: dict | None = None):
         self.path = path or default_config_path()
-        self.data = copy.deepcopy(DEFAULTS)
+        raw_loaded: dict = {}
         if os.path.exists(self.path):
             try:
                 with open(self.path, "r", encoding="utf-8") as f:
-                    self.data = _deep_merge(self.data, json.load(f))
+                    loaded = json.load(f)
+                if isinstance(loaded, dict):
+                    raw_loaded = loaded
                 log.info("config loaded: %s", self.path)
             except Exception as e:
                 log.warning("config load failed (%s); using defaults", e)
-        if overrides:
-            self.data = _deep_merge(self.data, overrides)
+
+        if overrides and isinstance(overrides, dict):
+            raw_loaded = _deep_merge(raw_loaded, overrides)
+
+        migrated_input = migrate_legacy_config(raw_loaded) if raw_loaded else {}
+        self.data = _deep_merge(DEFAULTS, migrated_input)
+        self.data = migrate_legacy_config(self.data)
+
         preset = PERSONALITIES.get(self.get("personality", "playful"), {})
         self.data["behavior"] = _deep_merge(self.data["behavior"], preset)
 
@@ -123,6 +136,10 @@ class Config:
         for part in parts[:-1]:
             node = node.setdefault(part, {})
         node[parts[-1]] = value
+        if dotted == "render.trail":
+            self.data.setdefault("render", {}).setdefault("trails", {})["enabled"] = bool(value)
+        elif dotted == "render.trails.enabled":
+            self.data.setdefault("render", {})["trail"] = bool(value)
 
     def apply_personality(self, name: str):
         if name in PERSONALITIES:
@@ -132,9 +149,21 @@ class Config:
 
     def save(self):
         try:
-            os.makedirs(os.path.dirname(self.path), exist_ok=True)
-            with open(self.path, "w", encoding="utf-8") as f:
-                json.dump(self.data, f, indent=2)
+            folder = os.path.dirname(os.path.abspath(self.path))
+            os.makedirs(folder, exist_ok=True)
+            fd, tmp_path = tempfile.mkstemp(prefix=".zwoop_cfg_", suffix=".tmp", dir=folder)
+            try:
+                with os.fdopen(fd, "w", encoding="utf-8") as f:
+                    json.dump(self.data, f, indent=2)
+                    f.flush()
+                    os.fsync(f.fileno())
+                os.replace(tmp_path, self.path)
+            finally:
+                if os.path.exists(tmp_path):
+                    try:
+                        os.remove(tmp_path)
+                    except OSError:
+                        pass
             log.info("config saved: %s", self.path)
         except Exception as e:
             log.warning("config save failed: %s", e)

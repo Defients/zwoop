@@ -276,6 +276,9 @@ user32.UpdateLayeredWindow.argtypes = [
     wintypes.HWND, wintypes.HDC, ctypes.POINTER(POINT), ctypes.POINTER(SIZE),
     wintypes.HDC, ctypes.POINTER(POINT), wintypes.DWORD,
     ctypes.POINTER(BLENDFUNCTION), wintypes.DWORD]
+user32.SetWindowPos.argtypes = [
+    wintypes.HWND, wintypes.HWND, ctypes.c_int, ctypes.c_int,
+    ctypes.c_int, ctypes.c_int, wintypes.UINT]
 
 
 def set_dpi_awareness():

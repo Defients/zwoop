@@ -45,6 +45,10 @@ def main(argv=None):
     ap.add_argument("--monitor", type=str, help="'auto' or display index")
     ap.add_argument("--no-tray", action="store_true",
                     help="run without tray icon (console only)")
+    ap.add_argument("--studio", "-s", action="store_true",
+                    help="open Trail Studio configuration window on launch")
+    ap.add_argument("--preset", "--trail-preset", dest="preset", type=str,
+                    help="initial trail preset ID (e.g. nebula_silk, stardust, solar_flare)")
     args = ap.parse_args(argv)
 
     if args.version:
@@ -61,11 +65,14 @@ def main(argv=None):
         overrides.setdefault("platform", {})["monitor"] = args.monitor
     if args.debug:
         overrides["debug"] = True
+    if args.preset:
+        overrides.setdefault("render", {}).setdefault("trails", {})["active_preset"] = args.preset
+        overrides["render"]["trails"]["custom_working"] = None
 
     cfg = Config(args.config, overrides=overrides)
 
     from .app import ZwoopApp
-    app = ZwoopApp(cfg)
+    app = ZwoopApp(cfg, open_studio_on_start=bool(args.studio))
     try:
         app.setup()
     except Exception as e:

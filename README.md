@@ -1,142 +1,90 @@
-# ZWOOP — The Living Desktop Creature
+# ZWOOP — The Living Desktop Creature (+ Trail Studio V1.0)
 
 One creature. Infinite motion.
 
 Zwoop is a single autonomous soft-bodied organism that lives on your
-Windows desktop. It is not a pet simulator, not an assistant, and not a
-cursor toy — it is a creature with its own agenda. It wanders, gets
-curious about your cursor, shies away from sudden movement, rests when
-you idle, and occasionally throws itself into spontaneous aerial
-maneuvers: darts, arcs, swoops, figure-eights, dives.
+Windows 10/11 desktop. It wanders, gets curious about your cursor, shies
+away from sudden movement, rests when you idle, and throws itself into
+spontaneous aerial maneuvers: darts, arcs, swoops, figure-eights, dives.
 
-It is a resurrection of the legacy *Kovy/Kovrycha* project — same soul,
-new body. The original source is preserved untouched in this repository;
-see `docs/LEGACY_AUDIT.md` for what was kept, fixed, and replaced.
+**New in v1.1.0 — Trail Studio V1.0 (The Living Motion Effects Engine):**
+Zwoop now features a world-space, behavior-reactive, multi-layer trail
+effects engine with **10 geometry families**, **25 bundled presets**, a
+controlled **Randomizer**, and the **Trail Studio** interactive editor.
 
-## Run it
+---
 
-Requires Windows 10/11 and Python 3.10+ with numpy:
+## Run It
 
-```
-pip install numpy
+Requires Windows 10/11 and Python 3.10+ with `numpy` (and `Pillow` for screenshot tools):
+
+```bash
+pip install numpy pillow
 cd <this repo>
 python -m zwoop
 ```
 
-or double-click / run the launcher (works from anywhere):
+Open **Trail Studio** immediately on launch:
 
+```bash
+python -m zwoop --studio
+# or launch with a specific trail preset:
+python -m zwoop --preset solar_flare
 ```
+
+Or run windowless from anywhere via the launcher shim:
+
+```bash
 pythonw run_zwoop.pyw
 ```
 
-A tray icon appears. Right-click it for control:
+### System Tray Controls
+- **Double-click** the Zwoop tray icon to open **Trail Studio**.
+- **Right-click** the tray icon for:
+  - **Open Trail Studio...**
+  - **Trails** $\rightarrow$ Enable/Disable, Presets (Recently Used, Favorites, Featured), Intensity, Quality (`Eco` / `Balanced` / `High` / `Ultra` / `Auto`), Clear current trails
+  - **Hide creature / Pause**
+  - **Personality** (`chill` / `playful` / `hyper` / `shy`)
+  - **Theme** (`cosmos` / `orchid` / `lagoon` / `ember`)
+  - **Frame rate** (`30` / `60` / `120` fps)
+  - **Monitor** (Roam all displays or pin to one)
+  - **Debug overlay**, **Launch on login**, **Open config folder**, **Exit Zwoop**
 
-- **Hide creature / Pause** — instant control
-- **Personality** — chill / playful / hyper / shy
-- **Theme** — cosmos / orchid / lagoon / ember
-- **Frame rate** — 30 / 60 / 120 fps
-- **Effects** — 0 flat, 1 gradient, 2 full glow + trail
-- **Monitor** — roam all displays or pin to one
-- **Debug overlay** — shows particles, waypoint, state
-- **Launch on login** — opt-in autostart (HKCU Run key)
-- **Exit Zwoop**
+---
 
-## Command line
+## Trail Studio V1.0 Highlights
 
+- **World-Space Persistent Trails:** Rendered on a dedicated click-through dynamic bounded `WS_EX_LAYERED` surface (`ZwoopTrailSurface`) positioned immediately behind Zwoop's body window—trails persist naturally across hundreds of pixels and multiple monitors without clipping at the creature's window boundary.
+- **10 Geometry Families:** `ribbon`, `beam`, `particles`, `smoke`, `sparks`, `segmented`, `spiral`, `echo` (deformation-preserving afterimages), `branching` (electric/fractal forks), and `legacy`.
+- **Up to 4 Independent Layers:** Reorder, solo, duplicate, copy/paste, and blend layers using premultiplied-alpha-safe `alpha`, `add`, `screen`, or `contrast` (dark-core) modes.
+- **25 Bundled Presets across 7 Collections:**
+  - *Cosmic:* `nebula_silk`, `astral_wake`, `stardust`, `event_horizon`
+  - *Elemental:* `solar_flare`, `frostwake`, `storm_arc`, `ember_drift`
+  - *Ethereal:* `ghost_veil`, `aurora_threads`, `moon_mist`, `spirit_ribbon`
+  - *Energetic:* `plasma_jet`, `ion_pulse`, `laser_thread`, `hyperdrive`
+  - *Playful:* `pixie_dust`, `bubble_pop`, `confetti_comet`, `candy_swirl`
+  - *Experimental:* `double_helix`, `fractal_echo`, `quantum_scatter`, `ink_in_water`
+  - *Legacy:* `legacy_zwoop`
+- **Behavior & Motion Reactivity:** Trails respond smoothly (with independent attack/release damping) to speed, acceleration, turning curvature, behavioral states, and aerial maneuvers.
+- **Controlled Randomizer:** 5 modes (`variation`, `remix`, `wild`, `palette_only`, `motion_only`), 8 lock categories, and shareable deterministic recipe codes (`ZTS1:...`).
+
+---
+
+## Documentation
+
+- [`docs/TRAIL_STUDIO_ARCHITECTURE.md`](docs/TRAIL_STUDIO_ARCHITECTURE.md) — Baseline audit, compositor evaluation, blending math, and subsystem architecture
+- [`docs/TRAIL_STUDIO_USER_GUIDE.md`](docs/TRAIL_STUDIO_USER_GUIDE.md) — Complete guide to Trail Studio tabs, gradient/layer editing, and randomizer recipes
+- [`docs/TRAIL_STUDIO_PRESETS.md`](docs/TRAIL_STUDIO_PRESETS.md) — Full inventory of all 25 bundled presets and their distinctive geometry
+- [`docs/TRAIL_STUDIO_PERFORMANCE.md`](docs/TRAIL_STUDIO_PERFORMANCE.md) — Empirical benchmark matrix across 13 scenarios and quality modes
+- [`docs/LEGACY_AUDIT.md`](docs/LEGACY_AUDIT.md) — Original Kovy/Kovrycha source archaeology
+- [`CHANGELOG.md`](CHANGELOG.md) — Release history
+
+---
+
+## Tests & Benchmarks
+
+```bash
+python -m unittest discover -s tests -v     # 36 automated tests (sim, brain, trails, studio)
+python tools/bench.py 80                    # 13-scenario performance benchmark matrix
+python tools/rastershot.py                  # headless frame dumps to docs/shots/
 ```
-python -m zwoop [--config PATH] [--debug] [--personality hyper]
-                [--fps 60] [--monitor 0] [--no-tray] [--version]
-```
-
-## Configuration
-
-Config lives at `%APPDATA%\Zwoop\config.json` (created on first save —
-the tray "Open config folder" entry takes you there). Every key has a
-sane default; you only need to write what you change. Highlights:
-
-```json
-{
-  "personality": "playful",
-  "behavior": {
-    "activity": 0.6, "curiosity": 0.6, "shyness": 0.3,
-    "expressiveness": 0.7, "preferred_distance": 160.0,
-    "rest_after_idle": 240.0, "maneuver_cooldown": 6.0
-  },
-  "render": { "fps": 60, "effects_level": 2, "theme": "cosmos",
-              "opacity": 0.92, "trail": true, "window_size": 420 },
-  "platform": { "monitor": "auto", "roam_monitors": true,
-                "hide_on_fullscreen": true },
-  "autostart": false,
-  "debug": false
-}
-```
-
-`platform.monitor` accepts `"auto"` (free-roam across all displays) or a
-display index `0, 1, 2, ...`. The log file sits next to the config at
-`%APPDATA%\Zwoop\zwoop.log`.
-
-## How it behaves
-
-- **WANDER** — drifts between waypoints with smooth steering; never
-  static, never pattern-locked.
-- **CURIOUS** — notices your cursor inside ~460px and drifts closer,
-  keeping a polite stand-off distance. It investigates; it does not beg.
-- **PERFORM** — spontaneous maneuvers with real physics: stored
-  velocity, actual trajectories. Anti-repetition — it won't do the same
-  trick twice in a row.
-- **RECOVER** — after a startle or a hard knock it settles itself.
-- **REST** — when you go idle for minutes, it calms down instead of
-  performing for an empty chair.
-
-Fast cursor movement inside ~170px startles it. A left-click is a jab
-it feels. Fullscreen apps make it hide itself and it comes back when
-they're done. It never takes input focus — the overlay is click-through.
-
-## Architecture
-
-```
-zwoop/
-  sim/          platform-agnostic simulation (numpy only, testable)
-    body.py       spring soft-body: 1 core + 12-particle ring
-    brain.py      state machine: WANDER/CURIOUS/PERFORM/RECOVER/REST
-    steering.py   seek/flee/orbit + maneuver generators
-    region.py     monitor-union geometry (any layout, negative coords)
-    perception.py cursor tracker: position, speed, jerk detection
-    world.py      fixed-step orchestration, deterministic seeds
-  render/
-    rasterizer.py metaball field -> glow shading -> premul BGRA
-    theme.py      color identities
-  platform_win/  ctypes-only Win32 (no pywin32 dependency)
-    overlay.py    layered click-through window via UpdateLayeredWindow
-    monitors.py   multi-monitor enum + fullscreen awareness
-    input.py      cursor pos / idle time / button state
-    tray.py       system-tray icon + menu
-    autostart.py  HKCU Run key (opt-in)
-    defs.py       Win32 signatures/constants
-  app.py         single-thread owner: pump, sim, render, composite
-  config.py      JSON config, deep-merge, personalities
-tests/test_zwoop.py   21 automated tests
-tools/bench.py        pipeline benchmark
-tools/rastershot.py   headless frame dumps (docs/shots)
-tools/screenshot.py   live desktop capture
-```
-
-Design rule: `zwoop/sim` and `zwoop/render` never import Win32 — the
-creature can be fully simulated, tested, and screenshotted headlessly.
-
-## Tests & tools
-
-```
-python -m unittest discover -s tests -v     # 21 tests
-python tools/bench.py                        # perf numbers
-python tools/rastershot.py                   # dump frames to docs/shots
-```
-
-## Legacy
-
-Original files (`main.py`, `kovrycha.py`, `motion.py`, `renderer.py`,
-`interaction.py`, `utils.py`, `minimal_kovrycha.py`,
-`overlay_kovrycha.py`, `bas0c_renderer.py`, `basic_screen.py`,
-`kovrycha.log`) are preserved exactly as found — archaeology, not
-baggage. `docs/LEGACY_AUDIT.md` documents what each did, what was
-broken, and what Zwoop inherited.
